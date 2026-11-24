@@ -1,0 +1,15 @@
+{
+  "name": "wifi-detector",
+  "version": "0.1.0",
+  "description": "Real-time passive Wi-Fi environment scanner: nearby networks, channel congestion, and honest low-bar diagnosis.",
+  "type": "module",
+  "private": true,
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node src/server.mjs",
+    "test": "node --test tests/"
+  },
+  "license": "UNLICENSED"
+}

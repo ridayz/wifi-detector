@@ -1,0 +1,3 @@
+# Launcher hasil build (dibuat ulang: ..\..\scripts\native-launcher\build.cmd)
+*.exe
+native/*.exe

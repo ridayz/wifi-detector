@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>WiFi Detector</title>
+<script>
+  // restore theme before first paint (no flash)
+  (function () {
+    try { var t = localStorage.getItem('wifi-detector-theme'); if (t) document.documentElement.dataset.theme = t; } catch (e) {}
+  })();
+</script>
+<link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <span class="logo" aria-hidden="true">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><path d="M12 20h.01"/></svg>
+    </span>
+    <div>
+      <h1>WiFi Detector</h1>
+      <p class="tagline">Nearby networks · channel congestion · why your bars are low</p>
+    </div>
+  </div>
+  <div class="topbar-right">
+    <div class="status" role="status" aria-live="polite">
+      <span id="live-dot" class="dot dot-wait"></span>
+      <span id="scan-state">Starting…</span>
+    </div>
+    <button id="fullscreen-button" class="theme-toggle" type="button" aria-label="Toggle fullscreen" aria-pressed="false">
+      <svg id="icon-expand" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>
+      <svg id="icon-collapse" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" hidden><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/></svg>
+      <span id="fullscreen-label">Full</span>
+    </button>
+    <button id="scan-button" class="theme-toggle scan-btn" type="button" aria-label="Scan networks now">
+      <svg id="icon-scan" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg>
+      <span id="scan-button-label">Scan</span>
+    </button>
+    <button id="theme-toggle" class="theme-toggle" type="button" aria-label="Toggle light and dark theme">
+      <svg id="icon-sun" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+      <svg id="icon-moon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+      <span id="theme-label">Theme</span>
+    </button>
+  </div>
+</header>
+
+<main class="grid">
+  <section class="panel connected-panel" aria-labelledby="h-connected">
+    <div class="panel-head"><h2 id="h-connected">Connected to</h2><span id="connected-bars" class="bars big" role="img" aria-label="signal bars"></span></div>
+    <div class="connected-body">
+      <div class="ssid-row">
+        <div id="connected-ssid" class="ssid">—</div>
+        <span id="connected-security" class="security-tag">—</span>
+      </div>
+      <div id="connected-bssid" class="bssid">—</div>
+      <div class="stat-grid">
+        <div class="stat"><span class="stat-label">Band</span><span id="connected-band" class="stat-value">—</span></div>
+        <div class="stat"><span class="stat-label">Channel</span><span id="connected-channel" class="stat-value">—</span></div>
+        <div class="stat"><span class="stat-label">RSSI</span><span id="connected-rssi" class="stat-value">—</span></div>
+        <div class="stat"><span class="stat-label">Radio</span><span id="connected-radio" class="stat-value">—</span></div>
+      </div>
+      <canvas id="rssi-spark" class="spark" width="520" height="96" role="img" aria-label="RSSI history"></canvas>
+    </div>
+  </section>
+
+  <section class="panel diagnosis-panel" aria-labelledby="h-diagnosis">
+    <div class="panel-head"><h2 id="h-diagnosis">Why are my bars low?</h2><span id="diag-confidence" class="confidence-tag">—</span></div>
+    <div id="diag-cause" class="cause cause-unknown">—</div>
+    <p id="diag-summary" class="summary">Waiting for first scan…</p>
+    <ul id="diag-suggestions" class="suggestions"></ul>
+    <p id="scan-support-note" class="note"></p>
+  </section>
+
+  <section class="panel congestion-panel" aria-labelledby="h-congestion">
+    <div class="panel-head"><h2 id="h-congestion">Congestion by channel</h2><span id="env-count" class="count-tag">—</span></div>
+    <div id="congestion" class="congestion-lists"><p class="cell-dim">Waiting for first scan…</p></div>
+  </section>
+
+  <section class="panel networks-panel" aria-labelledby="h-networks">
+    <div class="panel-head"><h2 id="h-networks">Networks in range</h2><span><span id="env-stale" class="count-tag" style="color:var(--warn)"></span><span id="networks-count" class="count-tag">0</span></span></div>
+    <div class="table-wrap">
+      <table class="networks">
+        <thead><tr><th>Signal</th><th>SSID</th><th>BSSID</th><th>Band</th><th>Ch</th><th>Security</th><th></th></tr></thead>
+        <tbody id="networks-body"><tr><td colspan="7" class="cell-dim">Waiting for first scan…</td></tr></tbody>
+      </table>
+    </div>
+  </section>
+</main>
+
+<div id="connect-overlay" class="overlay" hidden>
+  <div class="connect-card" role="dialog" aria-modal="true" aria-labelledby="connect-title">
+    <h2 id="connect-title">Connect to network</h2>
+    <div id="connect-ssid" class="connect-ssid mono-num"></div>
+    <label class="field"><span class="field-label">Wi-Fi password — leave empty to use a saved profile</span>
+      <span class="input-wrap">
+        <input id="connect-password" class="input" type="password" autocomplete="off" spellcheck="false" autocapitalize="off" />
+        <button id="password-toggle" class="eye-btn" type="button" aria-label="Show password" aria-pressed="false">
+          <svg id="icon-eye" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.48-7 10-7 10 7 10 7-3.48 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
+          <svg id="icon-eye-off" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" hidden><path d="M10.73 5.08A10.5 10.5 0 0 1 12 5c6.52 0 10 7 10 7a17.2 17.2 0 0 1-2.16 3.3M6.3 6.3A17 17 0 0 0 2 12s3.48 7 10 7a9.9 9.9 0 0 0 4.1-.82"/><line x1="2" y1="2" x2="22" y2="22"/></svg>
+        </button>
+      </span>
+    </label>
+    <p class="field-help">This will drop your current Wi-Fi connection and join the selected network. Nothing is logged or saved by the app.</p>
+    <p id="connect-result" class="connect-result" role="status" aria-live="polite"></p>
+    <div class="connect-actions">
+      <button id="connect-cancel" class="btn-ghost" type="button">Cancel</button>
+      <button id="connect-submit" class="btn-primary" type="button">Connect</button>
+    </div>
+  </div>
+</div>
+
+<footer class="foot">
+  Passive read-only scan · nothing leaves this machine · <span id="last-update">—</span>
+</footer>
+
+<script src="/app.js"></script>
+</body>
+</html>
